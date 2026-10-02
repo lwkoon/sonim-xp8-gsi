@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <fraction name="fingerprint_sensor_location_fraction_x">50%</fraction>
+    <fraction name="fingerprint_sensor_location_fraction_y">90%</fraction>
+    <string name="security_settings_fingerprint_enroll_find_sensor_message">It’s in the Home button below the screen. Use your index finger or thumb.</string>
+    <string name="security_settings_fingerprint_enroll_touch_dialog_message">Touch the sensor in the Home button below the screen.</string>
+    <string name="fingerprint_swipe_for_notifications_summary">To check your notifications, swipe down on the fingerprint sensor in the Home button.</string>
+    <!-- The speed-picker hotspot screen offers WPA3, which the stock hostapd HAL 1.1 cannot run. -->
+    <bool name="config_show_wifi_hotspot_speed">false</bool>
+</resources>
