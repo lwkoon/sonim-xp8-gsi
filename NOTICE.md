@@ -29,7 +29,7 @@ is stored in this repository.
 | phh IMS app `ims-caf-u-resigned.apk` | [treble.phh.me](https://treble.phh.me/) | No licence stated by the publisher |
 | Magisk v30.7 (only with `--magisk`) | [topjohnwu/Magisk](https://github.com/topjohnwu/Magisk) | GPL-3.0 |
 | AOSP test keys, `avbtool.py` (`android-16.0.0_r1`) | [android.googlesource.com](https://android.googlesource.com/) | Apache-2.0 |
-| Android SDK build-tools 36, platform 36, NDK r27d | [dl.google.com](https://dl.google.com/android/repository/) | Android Software Development Kit License Agreement |
+| Android SDK build-tools 36, platform 36, NDK r27d | [build-tools](https://developer.android.com/tools/releases/build-tools), [platforms](https://developer.android.com/tools/releases/platforms), [NDK](https://developer.android.com/ndk/downloads); downloaded from dl.google.com | Android Software Development Kit License Agreement |
 | apktool 2.10.0 and the LineageOS extract-tools copies of apktool, smali and baksmali | [iBotPeaches/Apktool](https://github.com/iBotPeaches/Apktool), [LineageOS/android_prebuilts_extract-tools](https://github.com/LineageOS/android_prebuilts_extract-tools) | apktool: Apache-2.0; smali/baksmali: BSD-3-Clause |
 | patchelf 0.19.1 | [NixOS/patchelf](https://github.com/NixOS/patchelf) | GPL-3.0 |
 | Debian packages in the build container | [build/Dockerfile](build/Dockerfile) | Their Debian licences |
