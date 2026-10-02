@@ -1,0 +1,205 @@
+# Technical notes
+
+For maintainers and porters: the device facts the scripts depend on, what
+the build changes in each image and why, and the bootloader unlock
+mechanism.
+
+## Contents
+
+- [Device facts](#device-facts)
+- [Partitions](#partitions)
+- [Kernel limits](#kernel-limits)
+- [What the build changes and why](#what-the-build-changes-and-why)
+  - [Boot image](#boot-image)
+  - [Vendor image](#vendor-image)
+  - [Init script and boot-time fixes](#init-script-and-boot-time-fixes)
+  - [System image changes](#system-image-changes)
+- [Bootloader unlock](#bootloader-unlock)
+
+## Device facts
+
+| Property | Value |
+|---|---|
+| Model / device | `XP8800` / `XP8800` |
+| SoC | Snapdragon 630 (SDM630), platform `sdm660`; Sahara HWID `0x000ac0e1` |
+| RAM / display | 3.7 GB / 1080x1920 |
+| Storage | eMMC, one LUN, 512-byte sectors (about 58 GiB) |
+| Stock software | Android 10, build `8A.0.0-03-10.0.0-00.40.00`, security patch 2020-09-01, kernel `4.4.205-perf+`, launch API 25 |
+| Layout | A/B (`ro.build.ab_update=true`), legacy system-as-root (`/` is `/dev/root`), no dynamic partitions, no `metadata` partition |
+| Treble | Not enabled on stock (`ro.treble.enabled=false`, `ro.vndk.lite=true`, VNDK 29). `/vendor` is a symlink to `/system/vendor`; `vendor_a`/`vendor_b` hold empty filesystems. The vendor SELinux policy is already split, and the stock DTB carries a disabled early-mount `vendor` fstab node. The build moves `/system/vendor` to `vendor_a` |
+| Verified boot | AVB 1.0 / dm-verity; boot image header v0 with gzip kernel, appended DTBs and an appended AVB1 signature |
+| Encryption on stock | FDE (`forceencrypt=footer`) |
+| Bootloader | edk2 LinuxLoader in `abl_a`; the stock ABL has no `fastboot flashing` or `flash:` command |
+| EDL | Qualcomm 9008 in the boot ROM, reachable by keys from any state; needs the Sonim-signed firehose loader |
+| USB IDs | `05c6:9008` (EDL), `18d1:d00d` (fastboot) |
+
+Slot `_b` is not a fallback: its bootloader partitions carry the inactive
+type GUID and slot B was never set up. The scripts write slot `_a` only;
+`flash.sh` and `restore-stock.sh` check that `current-slot` is `a`.
+
+## Partitions
+
+Partition facts the scripts rely on. `dump-stock.sh` checks that the
+required partitions exist; `unlock.sh` checks the `abl_a` and `frp` sizes.
+
+| Partition | Size | Role |
+|---|---|---|
+| `boot_a` | 64 MiB | Kernel and ramdisk (recovery is inside boot). The GSI boot image goes here |
+| `system_a` | 4 GiB | Stock system with `/system/vendor`; the GSI goes here. `assemble.sh` reads the stock vendor tree, properties and libraries from the backup copy |
+| `vendor_a` | 1 GiB | Empty on stock; the assembled vendor image goes here |
+| `abl_a` | 1 MiB | Bootloader. `unlock.sh` writes the userdebug ABL; `--relock` writes the stock one back |
+| `frp` | 512 KiB | Factory Reset Protection data; the last byte (offset 524287) is the OEM-unlock flag |
+| `misc` | 1 MiB | Bootloader control block; stock content is all zeros |
+| `userdata` | about 46 GiB | Erased on install, formatted by `fs_mgr` on first boot |
+| `modemst1`, `modemst2`, `fsg`, `fsc` | | Per-unit modem NV (IMEI, calibration); only `--restore-nv` writes them |
+| `persist` | 32 MiB | Per-unit Wi-Fi, Bluetooth and sensor calibration; Magisk pre-init data |
+| `devinfo` | 4 KiB | All zeros on stock; not used for the lock state, never written |
+| `gpt_main0` (backup file) | 20 sectors | Protective MBR, primary GPT header and entries; written with `edl ws 0` only for [recovery](troubleshooting.md#phone-ends-in-fastboot) |
+
+Never written by any script: `xbl*`, `tz*`, `rpm*`, `hyp*`, `pmic*`,
+`keymaster*`, `keystore`, `devcfg*`, `cmnlib*`, `devinfo`. A bad keymaster
+write is the hard brick reported for this phone.
+
+`flash.sh` uses fixed sizes for `boot_a`, `vendor_a`, `system_a` and `misc`
+because the userdebug ABL answers no `getvar partition-size` query.
+`fastboot` splits images larger than `max-download-size` (512 MiB) into
+sparse chunks.
+
+## Kernel limits
+
+The stock 4.4 kernel stays; its source is not published. These limits
+follow from it and do not change with a newer GSI:
+
+- No eBPF (`CONFIG_BPF_SYSCALL` off): `NetBpfLoad` refuses to run. Mobile
+  data and Wi-Fi work through TrebleDroid's fallback; per-app data usage and
+  limits do not.
+- No `userfaultfd`: ART uses its fallback garbage collector.
+- memcg on cgroup v1 only, no PSI (`/proc/pressure`), no cgroup v2 freezer:
+  `lmkd` uses vmstat for reclaim detection; the cached-app freezer is
+  unavailable.
+- Pre-4.6 ext4 encryption with Qualcomm PFK/ICE: file-based encryption v1
+  only; no metadata encryption.
+
+## What the build changes and why
+
+### Boot image
+
+[`build/lib/repack.py`](../build/lib/repack.py) rebuilds the stock `boot_a`
+(or its Magisk-patched copy) and keeps the kernel, ramdisk, offsets and OS
+version:
+
+- In every appended DTB with `/firmware/android/fstab/vendor`, it sets
+  `status = "okay"` and `fsmgr_flags = "wait,slotselect"`. First-stage init
+  then mounts `vendor_a` at `/vendor`. `verify` is dropped because the
+  vendor image has no verity metadata. No ramdisk fstab is needed.
+- It appends `androidboot.selinux=permissive` to the kernel command line.
+  Enforcing mode has not been attempted.
+- The appended AVB1 signature is carried over and no longer matches; the
+  unlocked bootloader accepts it (`verifiedbootstate=orange`).
+
+With `--magisk`, [`build/lib/magisk-patch.sh`](../build/lib/magisk-patch.sh)
+first runs Magisk's own `boot_patch.sh` on the host with the flags the
+Magisk app picks on this phone: `KEEPVERITY=true`, `KEEPFORCEENCRYPT=true`,
+`PATCHVBMETAFLAG=false` (AVB 1.0 has no vbmeta flags), `LEGACYSAR=true`.
+
+### Vendor image
+
+[`build/lib/mkvendor.py`](../build/lib/mkvendor.py) reads `/system/vendor`
+from the raw stock `system_a` with `debugfs` (no root, no loop mount) and
+writes a 1 GiB ext4 image. Stock entries keep their owner, mode and file
+capabilities; SELinux labels are recomputed from `plat_file_contexts` and
+`vendor_file_contexts`, as for a real `/vendor` partition. Timestamps and
+the filesystem UUID are fixed. The image is checked against the planned
+metadata before it is written to `out/`. The changes, with
+[`vendor/fs_config.tsv`](../vendor/fs_config.tsv) listing every added or
+removed entry:
+
+| Change | Why | Source |
+|---|---|---|
+| `fstab.qcom`: `verify` dropped from the `system` line | The GSI has no verity metadata | [`vendor/fstab.qcom.diff`](../vendor/fstab.qcom.diff) |
+| `fstab.qcom`: `userdata` uses `formattable,fileencryption=ice:aes-256-cts:v1` in place of `forceencrypt=footer,crashcheck` | Android 16 has no FDE. On this kernel `ice` selects the private mode that routes contents encryption through the eMMC inline crypto engine. `aes-256-xts` passes a loop-device test but on `/data` causes dm-verity and EIO errors and a hard reset during the first boot. `formattable` lets `fs_mgr` format an erased `userdata`; this is why the install uses `fastboot erase userdata` and not `fastboot format`, whose host mke2fs 1.47 sets a feature the phone's e2fsck rejects | [`vendor/fstab.qcom.diff`](../vendor/fstab.qcom.diff) |
+| `ro.vndk.version=29`, `ro.vndk.lite=true` | Stock sets them on `/system`, which the GSI replaces | [`vendor/props/vndk.prop`](../vendor/props/vndk.prop) |
+| Device properties from stock `/default.prop` (`ro.zygote`, `ro.bionic.*`, `dalvik.vm.isa.*`, `ro.oem_unlock_supported`), `/system/sdm660_64.prop` and `/system/build.prop`, appended to the vendor `build.prop`; `/system/vendor/` rewritten to `/vendor/` | They live on the stock `system_a`. Without `ro.zygote`, init cannot expand `init.${ro.zygote}.rc` and `odrefresh` aborts. Build identity, product, Google, Treble, APEX, carrier and dexopt properties are skipped | `mkvendor.py` |
+| `ro.telephony.default_network=9,9`, `telephony.lteOnCdmaDevice=0` | Replace the stock values: LTE/GSM/WCDMA on both slots, no CDMA | [`vendor/props/override.prop`](../vendor/props/override.prop) |
+| `ro.adb.secure=1`, `ro.debuggable=0`, `persist.sys.usb.config=none` | Stock user-build adb policy: host authorization, no `adb root`. The GSI's `/system/build.prop` enables adb, so adb is off after every wipe until turned on in Developer options | [`vendor/props/append.prop`](../vendor/props/append.prop) |
+| `ro.product.property_source_order=vendor,odm,product,system_ext,system` | The phone reports the stock model Sonim XP8800 and fingerprint `Sonim/XP8800/XP8800:16/...`; Device name defaults to `XP8800` | [`vendor/props/append.prop`](../vendor/props/append.prop) |
+| `ro.telephony.sim_slots.count=2`, `ro.com.android.dataroaming=false` | Two SIM slots; roaming off by default | [`vendor/props/append.prop`](../vendor/props/append.prop) |
+| 190 libraries copied from stock `/system/lib*` and `/system/product/lib*` | Stock vendor blobs link against them (mostly non-VNDK HIDL interface libraries, plus `libdrm`, `libchrome`, `libinput` and others). The GSI's linker namespace for vendor processes cannot see them on `/system`; without them about 40 HALs fail with `CANNOT LINK EXECUTABLE`, including `qcrild`, audio, camera and the hardware composer. The list is specific to this stock build and GSI | [`vendor/libs.txt`](../vendor/libs.txt) |
+| `etc/cgroups.json` mounting memcg v1 at `/dev/memcg` | Android 16's `cgroups.json` mounts memory cgroups only on v2. Without a memcg mount `lmkd` exits and `system_server` dies waiting for its socket | [`vendor/cgroups.json`](../vendor/cgroups.json) |
+| `libxp8shim.so`, added as a dependency of `/vendor/lib/libgui_vendor.so` | Provides `PermissionCache::checkPermission`, `fgetfilecon_raw` and `setsockcreatecon_raw`, which the stock 32-bit vendor libraries need and the GSI's VNDK 29 `libbinder`/`libselinux` lack | [`vendor/shim/`](../vendor/shim/) |
+| `xp8-vibrator` AIDL `IVibrator` service | Android 16 uses only the AIDL vibrator interface; the stock HAL is HIDL. The service switches `/sys/class/timed_output/vibrator/enable` | [`vendor/vibrator/`](../vendor/vibrator/) |
+| `XP8FrameworksRes` overlay | `config_showNavigationBar=false` (hardware Back, Home and Recents keys); `config_biometric_sensors` declares the fingerprint sensor; `config_locationProviderPackageNames` lists Google Play services and the fused provider, so the default permission grants give Play services location | [`vendor/rro/XP8FrameworksRes/`](../vendor/rro/XP8FrameworksRes/) |
+| `XP8Settings` and `XP8SystemUI` overlays | Fingerprint enrolment text and sensor position for the sensor in the Home button; `config_show_wifi_hotspot_speed=false`, so Settings uses the hotspot screen that hides WPA3 when the hotspot reports no SAE (the stock hostapd HAL is 1.1; the newer screen offers WPA3 regardless); SystemUI status bar padding and the app-ops indicator dot | [`vendor/rro/`](../vendor/rro/) |
+| Audio: `SND_DEVICE_OUT_SPEAKER_SAFE` mapped to the speaker ACDB ID; `speaker-safe` mixer paths routed to the speaker | Android 16 selects the speaker-safe device for ringtones during a call and for notifications; the stock files have no ACDB ID for it and route its mixer paths to the default device | [`vendor/audio/`](../vendor/audio/) |
+| `xtra-daemon` byte patch (four instructions in `XtraIzatAdapter::onReceiveXtraServers`) | The modem reports XTRA servers as bare host names, which the daemon rejects as "unsupported url"; the patch loads its built-in `https://path{1,2,3}.xtracloud.net` URLs. The input and output SHA-256 are checked | [`vendor/xtra-daemon.bpatch`](../vendor/xtra-daemon.bpatch) |
+| `CACertService` re-signed with the AOSP test platform key; its `oat/` removed | It runs as `android.uid.phone`. With the Sonim signature the package manager skips it, and XTRA's HTTPS download blocks waiting for `vendor.qti.hardware.cacert@1.0` | `mkvendor.py` |
+| `etc/xp8/messaging/`: patched Messaging APK and its oat files | Bind-mounted over the GSI's Messaging; see [System image changes](#system-image-changes) | [`vendor/fs_config.tsv`](../vendor/fs_config.tsv) |
+
+### Init script and boot-time fixes
+
+[`vendor/xp8-gsi.rc`](../vendor/xp8-gsi.rc) (init triggers) and
+[`vendor/xp8-gsi.sh`](../vendor/xp8-gsi.sh) (started at `boot_completed`):
+
+| Item | Why |
+|---|---|
+| `on late-fs`: unmount TrebleDroid's binds over `/vendor/lib{,64}/libpdx_default_transport.so` | TrebleDroid masks the library at `post-fs`; the stock `libgui_vendor.so` needs it. Without the unmount the OMX media HAL fails to link and crash-loops, and on a fresh install Rescue Party then stores a recovery wipe prompt in `misc` |
+| `on post-fs`: bind `/vendor/etc/xp8/messaging` over `/system/product/app/messaging` | Puts the patched Messaging in place without changing `system.img` |
+| `on post-fs`: bind an empty directory over `/system/system_ext/priv-app/Provision` | With AOSP Provision present, two activities handle `SETUP_WIZARD`; the package manager then grants nothing to Google SetupWizard, which crash-loops on the Wi-Fi screen |
+| `on post-fs && property:ro.boot.veritymode=logging`: reboot with reason `dm-verity enforcing` | After a dm-verity error (for example a failed stock boot) the ABL stays in dm-verity EIO mode (`androidboot.veritymode=logging`). Android 16's `update_verifier` then reboots every boot of a slot not yet marked successful, until the ABL marks `boot_a` unbootable. This reboot reason switches the ABL back to enforcing, at the cost of one extra reboot on the first boot |
+| Stop `sudaemon`; with Magisk, `/system/xbin/su` becomes a symlink to Magisk | Magisk `su` is the only root path. A bind mount would be shadowed by later TrebleDroid mounts |
+| `vendor.xp8-vibrator` service | Starts the AIDL vibrator with the `hal_vibrator_default` domain |
+| `persist.sys.phh.adb_secure=1` | TrebleDroid hook that sets `ro.adb.secure=1` and restarts adbd at each boot |
+| Restart the phone process once when the SIM is loaded and no IMS service is bound | TrebleDroid enables CAF IMS (`persist.sys.phh.ims.caf`) after the phone process has started on the first boot, so IMS would bind only from the second boot |
+| Set `com.android.webview` when the WebView provider is null | After a wipe, WebViewUpdateService picks no provider and does not retry; Play services setup screens then crash |
+| Mount `emulated;0` again until MediaProvider sees `external_primary` (up to three tries); `persist.xp8.no_sm_mount=1` turns it off | StorageManagerService does not record the unlock of user 0 on this GSI, so `/sdcard` stays unavailable to MediaProvider |
+| `persist.wm.debug.predictive_back_anim=0` | Turns off the predictive back animation |
+
+### System image changes
+
+[`build/build-system.sh`](../build/build-system.sh) starts from TrebleDroid
+`ci-20250617` `system-td-arm64-vanilla-old`. The `-old` variant carries the
+VNDK 28/29 libraries and `/system/etc/selinux/mapping/29.0.cil`, which the
+Android 10 vendor policy needs.
+
+| Change | Why | Source |
+|---|---|---|
+| MindTheGapps 16 | Google apps and Play services | [`build/inputs.lock`](../build/inputs.lock) |
+| Tethering APEX: null checks for `sLocalNetBlockedUidMap` in `BpfNetMaps`; the APEX is rebuilt, re-signed with AOSP's tethering test key (the key TrebleDroid's APEX already carries, or `APEX_KEY`) and stored uncompressed | Without eBPF the map is null and the connectivity service dereferences it | [`system/apexfix/`](../system/apexfix/) |
+| phh's IMS app `ims-caf-u` as `ImsCafXp8`, platform-signed | VoLTE. The Sonim IMS HAL numbers `IImsRadioIndication` transactions one higher than the interface the app implements from code `0x17` on; the patch drops code `0x17` and shifts the higher codes down by one | [`system/ims/`](../system/ims/) |
+| Launcher3 `isTaskbarEnabled` | With taskbar/navigation bar unification, Launcher3 enables its Taskbar even when the navigation bar is off for the hardware keys; the patch enables it only when the window manager has a navigation bar | [`system/launcher3/`](../system/launcher3/) |
+| `AuthService` in `services.jar` keeps the HIDL fingerprint configuration when AIDL instances exist | The stock fingerprint HAL is HIDL; unpatched, `AuthService` drops the HIDL configuration (`config_biometric_sensors`) when AIDL fingerprint instances are declared | [`system/services/`](../system/services/) |
+| Messaging manifest gains `RECEIVE_WAP_PUSH` and `READ_CELL_BROADCASTS` | Without them Android 16 rejects the GSI's Messaging as the default SMS app. The APK is shipped in the vendor image and bind-mounted | [`system/messaging/`](../system/messaging/) |
+
+The GSI is a userdebug build (`test-keys`); the vendor properties restore
+the stock adb policy. The platform key is public, so anyone who can install
+a package with system privileges can already replace system code; signing
+the tethering APEX with AOSP's public key does not add a new class of
+attacker.
+
+## Bootloader unlock
+
+The stock Android 10 ABL has no `fastboot flashing` commands and does not
+keep its lock state in `devinfo`. The AT&T Android 8.1 userdebug ABL
+(`abl.elf`, 110592 bytes) has `fastboot flashing unlock`, boots stock
+Android 10, and carries the same root certificate and `HW_ID` as the stock
+ABL, with `SW_ID` `0x1C` (rollback version 0), so secure boot accepts it.
+
+[`scripts/unlock.sh`](../scripts/unlock.sh), in one EDL session:
+
+1. writes the userdebug ABL to `abl_a`, zero-padded to the 1 MiB partition
+   so that no stock bytes remain, and reads it back;
+2. sets the last byte of `frp` (offset 524287) to `0x01`, the OEM-unlock
+   flag that `fastboot flashing get_unlock_ability` reads, and reads it
+   back;
+3. rewrites the `frp` checksum when `frp` holds Android's data block
+   (magic `19901873` at byte 32): bytes 0-31 are the SHA-256 of 32 zero
+   bytes followed by bytes 32 to the end. Android's PersistentDataBlockService
+   reformats `frp` at boot when the checksum does not match, which would
+   clear the byte;
+4. checks that nothing else in `frp` changed.
+
+Then `fastboot flashing unlock` sets the unlocked state and wipes userdata.
+`fastboot flashing unlock_critical` is not needed. Relocking is the reverse:
+`fastboot flashing lock` while the userdebug ABL is still in `abl_a`, then
+the stock `abl_a` and a zeroed `frp` over EDL
+([restore.md](restore.md#relock-the-bootloader)).
