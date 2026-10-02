@@ -76,8 +76,8 @@ sudo apt purge modemmanager
 | File | Source | SHA-256 |
 |---|---|---|
 | bkerler/edl | <https://github.com/bkerler/edl> (tested at commit `1cda1a6`) | n/a (git) |
-| Sonim firehose loader `prog_emmc_ufs_firehose_Sdm660_ddr.elf` | edl's `Loaders` submodule as `Loaders/sonim/0008c0e100010000_1b55c83cc1c00f4f_fhprg_peek.bin`, or `FlashTools.zip` in the [AndroidFileHost Sonim XP8 folder](https://androidfilehost.com/?w=files&flid=302393) (fid 4349826312261641937) | `d25b298ca36f467c3e30293e25492f08ea4831b4e98140313ff9ebca065c59b2` |
-| AT&T 8.1 userdebug ABL `abl.elf` (110592 bytes) | inside `Images_XP8A_ATT-userdebug-8A.0.5-11-8.1.0-10.54.00.zip`, [AndroidFileHost Sonim XP8 folder](https://androidfilehost.com/?w=files&flid=302393) (fid 4349826312261641939, about 3.3 GB), posted in the [XDA thread](https://xdaforums.com/t/sonim-xp8-root.3851187/) | `7e6145d80b9fb46b7a9fdc326bd00d9593c21e3bd7929490abeb967bd9272648` |
+| Sonim firehose loader `prog_emmc_ufs_firehose_Sdm660_ddr.elf` | edl's `Loaders` submodule as `Loaders/sonim/0008c0e100010000_1b55c83cc1c00f4f_fhprg_peek.bin`, or `FlashTools.zip` in the [AndroidFileHost Sonim XP8 folder](https://androidfilehost.com/?w=files&flid=302388) (fid 4349826312261641937) | `d25b298ca36f467c3e30293e25492f08ea4831b4e98140313ff9ebca065c59b2` |
+| AT&T 8.1 userdebug ABL `abl.elf` (110592 bytes) | inside `Images_XP8A_ATT-userdebug-8A.0.5-11-8.1.0-10.54.00.zip`, [AndroidFileHost Sonim XP8 folder](https://androidfilehost.com/?w=files&flid=302388) (fid 4349826312261641939, about 3.3 GB), posted in the [XDA thread](https://xdaforums.com/t/sonim-xp8-root.3851187/) | `7e6145d80b9fb46b7a9fdc326bd00d9593c21e3bd7929490abeb967bd9272648` |
 | Magisk v30.7 (only with root) | <https://github.com/topjohnwu/Magisk/releases/tag/v30.7>; `scripts/assemble.sh --magisk` downloads and checks it | `e0d32d2123532860f97123d927b1bb86c4e08e6fd8a48bfc6b5bee0afae9ebd5` |
 | Release components (Route A) | this repository's [releases](https://github.com/ndoo/sonim-xp8-gsi/releases) | listed in the release's `SHA256SUMS` |
 
