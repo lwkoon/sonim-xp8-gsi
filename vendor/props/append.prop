@@ -1,0 +1,10 @@
+ro.telephony.sim_slots.count=2
+ro.com.android.dataroaming=false
+
+# Stock A10 user build: adb authorization, no adb root
+ro.adb.secure=1
+ro.debuggable=0
+persist.sys.usb.config=none
+
+# Report the stock model (Sonim XP8800) instead of the GSI's product values
+ro.product.property_source_order=vendor,odm,product,system_ext,system

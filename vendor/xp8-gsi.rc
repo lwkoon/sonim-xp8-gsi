@@ -1,0 +1,36 @@
+service xp8-gsi /vendor/bin/xp8-gsi.sh
+    class late_start
+    user root
+    group root
+    disabled
+    oneshot
+    seclabel u:r:su:s0
+
+on property:sys.boot_completed=1
+    start xp8-gsi
+
+# TrebleDroid rw-system.sh (post-fs) masks libpdx_default_transport.so; the stock OMX HAL needs it.
+on late-fs
+    umount /vendor/lib/libpdx_default_transport.so
+    umount /vendor/lib64/libpdx_default_transport.so
+
+# GSI Messaging lacks RECEIVE_WAP_PUSH/READ_CELL_BROADCASTS; A16 then rejects it as default SMS app.
+on post-fs
+    mount none /vendor/etc/xp8/messaging /system/product/app/messaging bind
+    # AOSP Provision is a second SETUP_WIZARD activity; with two, PM grants nothing to Google SetupWizard.
+    mount none /vendor/etc/xp8/empty /system/system_ext/priv-app/Provision bind
+
+# Magisk su is the only root path (xp8-gsi.sh swaps it into /system/xbin).
+on property:init.svc.sudaemon=running
+    stop sudaemon
+
+# Android 16 has no HIDL vibrator support; AIDL shim over timed_output.
+service vendor.xp8-vibrator /vendor/etc/xp8/xp8-vibrator
+    class hal
+    user system
+    group system
+    seclabel u:r:hal_vibrator_default:s0
+
+# update_verifier reboots unless verity is enforcing; this reboot reason makes the ABL leave EIO mode.
+on post-fs && property:ro.boot.veritymode=logging
+    setprop sys.powerctl "reboot,dm-verity enforcing"
