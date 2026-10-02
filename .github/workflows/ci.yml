@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Andrew Yong
+# SPDX-License-Identifier: MIT
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fsfe/reuse-action@v5
+      - name: shellcheck
+        run: git ls-files '*.sh' | xargs shellcheck -x -P SCRIPTDIR
+
+  components:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: cache
+          key: components-${{ hashFiles('build/inputs.lock') }}
+      - run: docker build --platform linux/amd64 -t xp8-gsi-build build
+      - run: docker run --rm -v "$PWD:/src" xp8-gsi-build build/fetch.sh sdk/ tools/ keys/
+      - run: docker run --rm -v "$PWD:/src" xp8-gsi-build build/build-components.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: components
+          path: out/components/

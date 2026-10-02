@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 Andrew Yong
+# SPDX-License-Identifier: MIT
+name: release
+
+on:
+  push:
+    tags: ['a16-*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: cache
+          key: inputs-${{ hashFiles('build/inputs.lock') }}
+
+      - name: Build the build image
+        run: docker build --platform linux/amd64 -t xp8-gsi-build build
+
+      - name: Fetch inputs
+        run: docker run --rm -v "$PWD:/src" xp8-gsi-build build/fetch.sh
+
+      - name: Build components
+        run: docker run --rm -v "$PWD:/src" xp8-gsi-build build/build-components.sh
+
+      - name: Build system.img
+        run: docker run --rm -v "$PWD:/src" xp8-gsi-build build/build-system.sh
+
+      - name: Package
+        run: |
+          tag=${GITHUB_REF_NAME}
+          [ "$GITHUB_REF_TYPE" = tag ] || tag=dryrun-$(date -u +%Y%m%d)
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          sudo chown -R "$(id -u):$(id -g)" out work cache
+          rm -rf work
+          docker run --rm -v "$PWD:/src" xp8-gsi-build build/package.sh "$tag"
+
+      - name: Upload workflow artifacts (dry run)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ env.TAG }}
+          path: out/release/
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          d=${TAG#a16-}
+          gh release create "$TAG" out/release/* \
+            --title "Android 16 GSI for Sonim XP8 (XP8800), ${d:0:4}-${d:4:2}-${d:6:2}" \
+            --notes-file <(printf 'Built from %s.\n\nInputs: see build/inputs.lock at this tag.\n' "$GITHUB_SHA")
