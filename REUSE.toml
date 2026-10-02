@@ -1,0 +1,34 @@
+version = 1
+SPDX-PackageName = "sonim-xp8-gsi"
+SPDX-PackageDownloadLocation = "https://github.com/ndoo/sonim-xp8-gsi"
+
+[[annotations]]
+path = ["system/**.smali", "system/**.smali.diff", "system/**.smali.patch"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The Android Open Source Project; 2026 Andrew Yong"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["LICENSE", ".gitignore", "docs/**", "README.md", "NOTICE.md", "build/inputs.lock", "vendor/**.txt", "vendor/**.json", "vendor/**.prop", "vendor/**.diff", "vendor/rro/**", "vendor/xp8-gsi.rc", "vendor/xp8-gsi.sh"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Andrew Yong"
+SPDX-License-Identifier = "MIT"
+
+# After the MIT vendor/**.diff entry: the last matching annotation wins.
+[[annotations]]
+path = ["vendor/audio/*.diff"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The Linux Foundation; 2026 Andrew Yong"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+path = ["system/messaging/*.diff"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The Android Open Source Project; 2026 Andrew Yong"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["vendor/vibrator/*.xml"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Andrew Yong"
+SPDX-License-Identifier = "MIT"

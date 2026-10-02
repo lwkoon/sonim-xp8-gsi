@@ -1,0 +1,32 @@
+# Build outputs and downloads
+/out/
+/work/
+/cache/
+/backups/
+
+# Never commit images, archives or proprietary binaries
+*.img
+*.img.*
+*.bin
+*.bin.zst
+*.zst
+*.xz
+*.zip
+*.apk
+*.apex
+*.capex
+*.jar
+*.so
+*.elf
+*.dtb
+*.tar
+*.tar.*
+*.pem
+*.pk8
+*.x509.pem
+
+# Python bytecode from build/lib
+__pycache__/
+
+# Written by edl in its working directory
+edl_config.json
