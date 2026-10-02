@@ -2,8 +2,9 @@
 # SPDX-FileCopyrightText: 2026 Andrew Yong
 # SPDX-License-Identifier: MIT
 #
-# Build out/system.img: TrebleDroid vanilla-old + MindTheGapps + tethering apex
-# fix + ImsCafXp8 + Launcher3 and AuthService patches. Also writes
+# Build out/system.img: TrebleDroid vanilla-old + MindTheGapps (replacing AOSP
+# QuickSearchBox) + tethering apex fix + ImsCafXp8 + Launcher3 (Taskbar, no
+# fixed first-screen search bar) and AuthService patches. Also writes
 # out/components/messaging/ (patched Messaging APK + its oat, for the vendor image).
 #
 # usage: build/build-system.sh [STAGE...]
@@ -134,7 +135,7 @@ stage_base() {
 }
 
 stage_gapps() {
-    log "gapps: MindTheGapps into /system/{product,system_ext}"
+    log "gapps: MindTheGapps into /system/{product,system_ext}; AOSP QuickSearchBox removed"
     local f rel
     q_begin
     while IFS= read -r f; do
@@ -144,6 +145,7 @@ stage_gapps() {
             *) q_put "$f" "/system/$rel" "$SYS" ;;
         esac
     done < <(find "$CACHE/mtg" -type f | LC_ALL=C sort)
+    q_rm_tree /system/product/app/QuickSearchBox
     q_commit
 }
 
@@ -248,7 +250,7 @@ stage_ims() {
 }
 
 stage_launcher3() {
-    log "launcher3: no Taskbar when the window manager has no navigation bar"
+    log "launcher3: no Taskbar without a navigation bar, no fixed search bar on the first screen"
     local l=$W/launcher3 d=/system/system_ext/priv-app/Launcher3QuickStep
     rm -rf "$l" && mkdir -p "$l"
     dump "$d/Launcher3QuickStep.apk" "$l/orig.apk"
@@ -262,6 +264,35 @@ new = "\n".join(x for x in new.splitlines() if not x.startswith("#")).strip()
 s = open(f).read()
 s2, n = re.subn(r'\.method private isTaskbarEnabled\(Lcom/android/launcher3/DeviceProfile;\)Z.*?\.end method',
                 lambda m: new, s, count=1, flags=re.S)
+assert n == 1, n
+open(f, "w").write(s2)
+PY
+    # R8 folded QSB_ON_FIRST_SCREEN=true into every SHOULD_SHOW_FIRST_PAGE_WIDGET read; true there acts as QSB off.
+    python3 - "$l/smali/com/android/launcher3/Utilities.smali" <<'PY'
+import re, sys
+f = sys.argv[1]
+s = open(f).read()
+s2, n = re.subn(r'(\n    )(sput-boolean v0, Lcom/android/launcher3/Utilities;->SHOULD_SHOW_FIRST_PAGE_WIDGET:Z\n'
+                r'(?:\s*\.line \d+\n)?\s*invoke-static \{\}, Landroid/app/ActivityManager;->isRunningInTestHarness\(\)Z\s*move-result v0\n)',
+                r'\1const/4 v0, 0x1\1\2', s)
+assert n == 1, n
+open(f, "w").write(s2)
+PY
+    # Also report a found screen as new: the workspace strips an empty first screen that the model still offers.
+    python3 - "$l/smali/com/android/launcher3/model/WorkspaceItemSpaceFinder.smali" <<'PY'
+import re, sys
+f = sys.argv[1]
+s = open(f).read()
+add = """if-eqz v2, :xp8_new
+    invoke-virtual {p2, v6}, Lcom/android/launcher3/util/IntArray;->contains(I)Z
+    move-result v2
+    if-nez v2, \\1
+    invoke-virtual {p2, v6}, Lcom/android/launcher3/util/IntArray;->add(I)V
+    goto \\1
+    :xp8_new
+"""
+s2, n = re.subn(r'if-nez v2, (:cond_\w+)\n(?=(?:\s*\.line \d+)?\s*iget-object v2, p0, '
+                r'Lcom/android/launcher3/model/WorkspaceItemSpaceFinder;->mModel:)', add, s)
 assert n == 1, n
 open(f, "w").write(s2)
 PY
