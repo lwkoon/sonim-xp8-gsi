@@ -1,0 +1,27 @@
+--- a/smali/vendor/qti/hardware/radio/ims/V1_8/IImsRadioIndication$Stub.smali
++++ b/smali/vendor/qti/hardware/radio/ims/V1_8/IImsRadioIndication$Stub.smali
+@@ -601,6 +601,24 @@
+         }
+     .end annotation
+ 
++    const/16 v0, 0x17
++
++    if-eq p1, v0, :xp8_drop
++
++    if-lt p1, v0, :xp8_go
++
++    const/high16 v0, 0xf000000
++
++    if-ge p1, v0, :xp8_go
++
++    add-int/lit8 p1, p1, -0x1
++
++    goto :xp8_go
++
++    :xp8_drop
++    return-void
++
++    :xp8_go
+     .line 1392
+     const-string v0, "vendor.qti.hardware.radio.ims@1.7::IImsRadioIndication"
+ 
