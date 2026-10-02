@@ -1,0 +1,68 @@
+# Pinned build inputs: <cache path> <url> <sha256> [base64]
+# fetch.sh downloads each url to cache/<cache path> and checks the sha256.
+# "base64" marks a googlesource ?format=TEXT url; the hash is of the decoded file.
+
+# TrebleDroid ci-20250617 (android-16.0.0_r1), arm64, vanilla, VNDK 28/29
+td/system-td-arm64-vanilla-old.img.xz https://github.com/TrebleDroid/treble_experimentations/releases/download/ci-20250617/system-td-arm64-vanilla-old.img.xz ea94666cbd5431a6c9b5d80268dcb38da1e18d83a7bd9b6b2a2e0b5a60977603
+
+# phh IMS (org.codeaurora.ims) for Android 14+ GSIs
+ims/ims-caf-u-resigned.apk https://treble.phh.me/ims-caf-u-resigned.apk 09a72f205255a5d86b596373a4c85797decad9067beaaf7cee8df1a03d952fe8
+
+# Magisk (optional root)
+magisk/Magisk-v30.7.apk https://github.com/topjohnwu/Magisk/releases/download/v30.7/Magisk-v30.7.apk e0d32d2123532860f97123d927b1bb86c4e08e6fd8a48bfc6b5bee0afae9ebd5
+
+# AOSP test keys (APKs, tethering APEX) and avbtool, android-16.0.0_r1
+keys/testkey.pk8 https://android.googlesource.com/platform/build/+/refs/tags/android-16.0.0_r1/target/product/security/testkey.pk8?format=TEXT 495675d32e89a149d5abe191f4e9c0e218b9068714e9b53a7c91e164a0741a23 base64
+keys/testkey.x509.pem https://android.googlesource.com/platform/build/+/refs/tags/android-16.0.0_r1/target/product/security/testkey.x509.pem?format=TEXT a4384ba815b9499a5ce349b4e33c1755278873fe2eac150a068823f526e6dbde base64
+keys/platform.pk8 https://android.googlesource.com/platform/build/+/refs/tags/android-16.0.0_r1/target/product/security/platform.pk8?format=TEXT 1ad8ef556870edb70f69a9d3c112544c07de5162ba440d84d33f8bb0c5962875 base64
+keys/platform.x509.pem https://android.googlesource.com/platform/build/+/refs/tags/android-16.0.0_r1/target/product/security/platform.x509.pem?format=TEXT 9837de028f460c35cc8d3fa45f14eecce30f6fbfe4b93d399aef1acb80c20d14 base64
+keys/com.android.tethering.pem https://android.googlesource.com/platform/packages/modules/Connectivity/+/refs/tags/android-16.0.0_r1/Tethering/apex/com.android.tethering.pem?format=TEXT 97510dba7a0a23860767d05985d909921c1452d886763256c98372fbe882cc1f base64
+tools/avbtool.py https://android.googlesource.com/platform/external/avb/+/refs/tags/android-16.0.0_r1/avbtool.py?format=TEXT e5a664a38db623da00f080219bc0ee60a640a9dc4a872803616fae4938ac749b base64
+
+# Android SDK build-tools 36 (aapt2, zipalign, apksigner), platform 36 (android.jar), NDK r27d
+sdk/build-tools_r36_linux.zip https://dl.google.com/android/repository/build-tools_r36_linux.zip 5d9ac77fb6ff43d9da518a337b4fcf8f9097113df531d99ccefe80ef7ce8250b
+sdk/platform-36_r02.zip https://dl.google.com/android/repository/platform-36_r02.zip 37607369a28c5b640b3a7998868d45898ebcb777565a0e85f9acf36f29631d2e
+sdk/android-ndk-r27d-linux.zip https://dl.google.com/android/repository/android-ndk-r27d-linux.zip 601246087a682d1944e1e16dd85bc6e49560fe8b6d61255be2829178c8ed15d9
+
+# apktool 2.10.0 (IMS); LineageOS extract-tools apktool 2.9.3, smali/baksmali (Launcher3, services, apexfix, Messaging)
+tools/apktool_2.10.0.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar c0350abbab5314248dfe2ee0c907def4edd14f6faef1f5d372d3d4abd28f0431
+tools/apktool.jar https://raw.githubusercontent.com/LineageOS/android_prebuilts_extract-tools/a8aabbbe42bdecba4c6d1a9e6e71fbc47de59f96/common/apktool/apktool.jar 263f47b74786f9e64715535cdd5f71183a2a57334cbbe857c1ee6a451026b30d
+tools/smali.jar https://raw.githubusercontent.com/LineageOS/android_prebuilts_extract-tools/a8aabbbe42bdecba4c6d1a9e6e71fbc47de59f96/common/smali/smali.jar b8f790266a640a0de35391dc91fc12c7519ae4c5501f12496b138003fe4631ef
+tools/baksmali.jar https://raw.githubusercontent.com/LineageOS/android_prebuilts_extract-tools/a8aabbbe42bdecba4c6d1a9e6e71fbc47de59f96/common/smali/baksmali.jar 9b821ea330526f97231888402664b50617b81561e8b2d6bc21c55c358bc8440f
+
+# patchelf 0.19.1 (Debian's 0.18 lays out libgui_vendor.so differently from the reference image)
+tools/patchelf-0.19.1-x86_64.tar.gz https://github.com/NixOS/patchelf/releases/download/0.19.1/patchelf-0.19.1-x86_64.tar.gz a6818fef80128fb354423234ecacdcca3e993913d774e5d8346bc63f70fed4cf
+
+# MindTheGapps 16 (baklava) at f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd: {common,arm64}/proprietary/<partition path>
+mtg/product/app/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/app/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk 0b3aa6f8d4bc16645b26136dbc228f3a0fe503c01f54892f577715f61e3ef5a7
+mtg/product/app/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/app/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk 5396a4ddf818f69a51d34a10ab23c8356add171ef2394f5bbca9e63b74594f4e
+mtg/product/app/PrebuiltExchange3Google/PrebuiltExchange3Google.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/app/PrebuiltExchange3Google/PrebuiltExchange3Google.apk 3f65c5fb9da1e341590373497a520c18b286eb44946d0b1b6a8e588e6985acdb
+mtg/product/etc/default-permissions/default-permissions-google.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/default-permissions/default-permissions-google.xml 4513efc5d1e2efe0619d1b3551a6016813a02beb862c849ef6d6e26f7335ea9c
+mtg/product/etc/default-permissions/default-permissions-mtg.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/default-permissions/default-permissions-mtg.xml 250a22a5b0fd63140ae3842404d3ea85b5f390962d8350c96ff4b7ce4029a4f3
+mtg/product/etc/init/gapps.rc https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/init/gapps.rc 29e185019f9f244adc396e40e2ee1d482fd98d515f4aec9feacd6b685cab1a66
+mtg/product/etc/permissions/com.google.android.dialer.support.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/permissions/com.google.android.dialer.support.xml b3b530828259e81adffbd78cd64735afe65849f78dc2bb09b62e14b8ddef3244
+mtg/product/etc/permissions/privapp-permissions-google-product.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/permissions/privapp-permissions-google-product.xml 52a29afb2c2657624a7e66f47b70a26ad503c1f5f107347980e9d8f6d5574605
+mtg/product/etc/permissions/privapp-permissions-mtg.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/permissions/privapp-permissions-mtg.xml ba124a28fed8760be03259311766556e29ac5ac766842362c571bf029071d356
+mtg/product/etc/security/fsverity/gms_fsverity_cert.der https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/security/fsverity/gms_fsverity_cert.der 1a78f5d70b87441c7d13384179e377f4f3105be25814eef05cd95d1b736775b9
+mtg/product/etc/sysconfig/d2d_cable_migration_feature.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/sysconfig/d2d_cable_migration_feature.xml 364372d5bb87bbf22b2628b14e2b56d521fb17ce27df804713c6fbea2eb2088c
+mtg/product/etc/sysconfig/google-hiddenapi-package-allowlist.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/sysconfig/google-hiddenapi-package-allowlist.xml 47612877a9484d9426a9964843016f0da34153f7f1446fbabcfba7e469790cd1
+mtg/product/etc/sysconfig/google.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/sysconfig/google.xml edf812885b78966b74f121d13d1ef7120aeab2b51211182b709bfb3c93b91330
+mtg/product/etc/sysconfig/sysconfig-mtg.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/sysconfig/sysconfig-mtg.xml 1168d925f94032c7e464e225f8eda63f530bfae9d200630e4ed65bcc8bc2a9d3
+mtg/product/etc/sysconfig/wellbeing.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/etc/sysconfig/wellbeing.xml eb737eb93ffa855638793cf898c9bb73dff81fa48fa0ecaf7707280a9f1b2753
+mtg/product/framework/com.google.android.dialer.support.jar https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/framework/com.google.android.dialer.support.jar 584859f94fe2dd0c4aec65f514a990b6f4fc8290bfd7565e2fe036d761aee89e
+mtg/product/priv-app/AndroidAutoStub/AndroidAutoStub.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/priv-app/AndroidAutoStub/AndroidAutoStub.apk ccf1a6bac466b83e2c4fe16871ff536062598fba95deb98d7fcc1acf2b8469d9
+mtg/product/priv-app/GooglePartnerSetup/GooglePartnerSetup.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/priv-app/GooglePartnerSetup/GooglePartnerSetup.apk e9fb81095b86cf2429040f45bf0be7f75481a30dbd5b80e26c9d3210a5ac7971
+mtg/product/priv-app/GoogleRestore/GoogleRestore.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/priv-app/GoogleRestore/GoogleRestore.apk 03a5ff1e45a4156bbd97d76cbfa40a5d8c210538e03d36a3f7a0b0a0ee07f67a
+mtg/product/priv-app/Wellbeing/Wellbeing.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/product/priv-app/Wellbeing/Wellbeing.apk 9add03eb90ab2b9297f7669b2973d43e97cb58abd7d66e948a8e6481a5052545
+mtg/system_ext/etc/permissions/privapp-permissions-google-system-ext.xml https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/system_ext/etc/permissions/privapp-permissions-google-system-ext.xml 9fa1a0cc067411bba99803e216db8485fe5b921771fa2b9bfeb0ea1d9ee0c805
+mtg/system_ext/priv-app/GoogleFeedback/GoogleFeedback.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/system_ext/priv-app/GoogleFeedback/GoogleFeedback.apk 6b2ecd2f310410bc368202e9d97ef7b443d7c02947c845dd351b04ec040683f3
+mtg/system_ext/priv-app/GoogleServicesFramework/GoogleServicesFramework.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/common/proprietary/system_ext/priv-app/GoogleServicesFramework/GoogleServicesFramework.apk 41c0d547ac1466e87ccf783e36192cacbda0f6010128327a2503b4330dc8b534
+mtg/product/app/MarkupGoogle_v2/MarkupGoogle_v2.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/app/MarkupGoogle_v2/MarkupGoogle_v2.apk 5f0cc86a3fab53184d728c30a7e1c6c2530f791ffae6066b7d05bd30a82b7ebe
+mtg/product/app/SpeechServicesByGoogle/SpeechServicesByGoogle.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/app/SpeechServicesByGoogle/SpeechServicesByGoogle.apk 775a036508f6fd4607414cdcb200203ca872554ef948f2b96a56250e2c89e0e1
+mtg/product/app/talkback/talkback.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/app/talkback/talkback.apk db5d112394079902f800b4361fb7e44b81880f0cc2e8aeca561adaf0b01a4b0c
+mtg/product/lib64/libjni_latinimegoogle.so https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/lib64/libjni_latinimegoogle.so 41a39a7410dfe3e90d530aeca84cb4dfbe2c2e411ca7470cb32e93625a5f33e0
+mtg/product/priv-app/GmsCore/GmsCore.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/priv-app/GmsCore/GmsCore.apk 25c27184482da38ea7ddc8b75488eaeb49e756dae1096ded20912092ea30c19b
+mtg/product/priv-app/Phonesky/Phonesky.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/priv-app/Phonesky/Phonesky.apk 8ee254546102d2a6accf269abe62869c54b098e1ba54fd538a47d2f79b9991d2
+mtg/product/priv-app/VelvetTitan/VelvetTitan.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/priv-app/VelvetTitan/VelvetTitan.apk 097d72cc9e334d4203cd8ad946cd0afe93191d87a9084fce358cd468570f3c81
+mtg/product/priv-app/Velvet/Velvet.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/product/priv-app/Velvet/Velvet.apk 59895254da4ac8cb7cf0bc379a226b8c78e1aa1fdc64d5b5ea5337916ac78440
+mtg/system_ext/priv-app/SetupWizard/SetupWizard.apk https://gitlab.com/MindTheGapps/vendor_gapps/-/raw/f8cdcffc2fb9181b8cc5a9b02d4b5908b64e5cdd/arm64/proprietary/system_ext/priv-app/SetupWizard/SetupWizard.apk ea8fffab89ca4ac161057d21b5abe0f9e6cd7bb2f9970df3173c02c23a21b8fd
