@@ -397,21 +397,21 @@ when you switch root on or off.
    scripts/flash.sh
    ```
 
-   `flash.sh` has no option to skip an image: it writes `boot_a`,
-   `vendor_a` and `system_a`, with `boot_a` from step 2. Its warning about
-   `--wipe` applies only when coming from stock Android or another ROM.
+   This writes `boot_a`, `vendor_a` and `system_a`, with `boot_a` from
+   step 2. Its warning about `--wipe` applies only when coming from stock
+   Android or another ROM.
 
-To write only `vendor_a` and `system_a`, use fastboot directly and wait
-after each write (about 1 s per 15 MB, plus 5 s, as `flash.sh` does):
+To write only some images, name them with `--only`; the others and user
+data are left as they are. For a release that changes only the system
+image:
 
 ```sh
-fastboot -s "$SERIAL" flash vendor_a out/vendor.img
-sleep 80
-fastboot -s "$SERIAL" flash system_a out/system.img
-sleep 295
-fastboot -s "$SERIAL" getvar unlocked       # unlocked: yes
-fastboot -s "$SERIAL" reboot
+scripts/flash.sh --only system
 ```
+
+`--only vendor,system` writes both and keeps `boot_a`. `flash.sh` waits
+after each write until the phone has finished writing (about 1 s per 15 MB,
+plus 5 s).
 
 If a command prints `unknown command` or hangs, hold Power 10-15 s; see
 [Fastboot stall](troubleshooting.md#fastboot-stall).
