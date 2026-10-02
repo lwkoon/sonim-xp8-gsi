@@ -25,7 +25,8 @@ fi
 wait "$xzpid"
 echo "== packing components"
 # Scripts and vendor data come from the git checkout of TAG; the tarball holds only built parts.
-"$TAR" -C "$OUT" --owner=0 --group=0 --sort=name -cf - components |
+"$TAR" -C "$OUT" --owner=0 --group=0 --numeric-owner --sort=name \
+    --mtime="@${SOURCE_DATE_EPOCH:-1750118400}" --format=gnu -cf - components |
     xz -T0 -6 > "$R/xp8-gsi-components-$TAG.tar.xz"
 # The raw system.img line lets users check the unpacked image (sha256sum -c --ignore-missing).
 (cd "$R" && sha256sum system.img.xz "xp8-gsi-components-$TAG.tar.xz" &&
