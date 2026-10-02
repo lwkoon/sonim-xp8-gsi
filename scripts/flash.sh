@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Andrew Yong
+# SPDX-License-Identifier: MIT
+#
+# Flash the GSI over fastboot: boot_a, vendor_a, then system_a last.
+# Needs an unlocked bootloader on slot a. Writes nothing else unless asked.
+#
+# usage: SERIAL=... scripts/flash.sh [options]
+#   --dir DIR      directory with boot.img, vendor.img and system.img (default: out)
+#   --boot FILE    --vendor FILE    --system FILE    override single images
+#   --wipe         fastboot erase userdata; required when coming from stock or any
+#                  other ROM (the GSI uses file-based encryption). Deletes all user data.
+#   --clear-misc   also write 1 MiB of zeros (stock content) to misc
+#   --misc-only    write only the zeroed misc, then reboot (fixes a recovery boot loop)
+#   --yes          the user has approved these writes; skip the prompt
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+# shellcheck source=lib/device.sh
+. "$ROOT/scripts/lib/device.sh"
+usage() { sed -n '5,16s/^# \{0,1\}//p' "$0" >&2; exit 2; }
+
+DIR=$ROOT/out BOOT='' VENDOR='' SYSTEM='' WIPE=0 MISC=0 MISCONLY=0
+while [ $# -gt 0 ]; do
+    case $1 in
+        --dir) DIR=$2; shift 2 ;;
+        --boot) BOOT=$2; shift 2 ;;
+        --vendor) VENDOR=$2; shift 2 ;;
+        --system) SYSTEM=$2; shift 2 ;;
+        --wipe) WIPE=1; shift ;;
+        --clear-misc) MISC=1; shift ;;
+        --misc-only) MISC=1; MISCONLY=1; shift ;;
+        --yes) YES=1; shift ;;
+        -h|--help) usage ;;
+        *) die "unknown argument $1" ;;
+    esac
+done
+BOOT=${BOOT:-$DIR/boot.img} VENDOR=${VENDOR:-$DIR/vendor.img} SYSTEM=${SYSTEM:-$DIR/system.img}
+
+require_serial
+need_tools adb fastboot
+[ $MISCONLY = 0 ] || { BOOT='' VENDOR='' SYSTEM=''; }
+for f in ${BOOT:+"$BOOT"} ${VENDOR:+"$VENDOR"} ${SYSTEM:+"$SYSTEM"}; do
+    [ -f "$f" ] || {
+        [ -f "$f.zst" ] && die "$f is compressed; run: zstd -d '$f.zst'"
+        die "missing $f"
+    }
+done
+
+# Checksums written by assemble.sh and listed in the release SHA256SUMS, when present.
+verify_listed() {
+    local list=$1 f want
+    [ -f "$list" ] || return 0
+    for f in ${BOOT:+"$BOOT"} ${VENDOR:+"$VENDOR"} ${SYSTEM:+"$SYSTEM"}; do
+        want=$(awk -v n="$(basename "$f")" '$2 == n || $2 == "*" n {print $1; exit}' "$list")
+        [ -n "$want" ] || continue
+        [ "$(sha256 "$f")" = "$want" ] || die "$f does not match $list"
+        say "$(basename "$f"): checksum OK ($list)"
+    done
+}
+if [ $MISCONLY = 0 ]; then
+    verify_listed "$(dirname "$BOOT")/assemble.sha256"
+    verify_listed "$(dirname "$SYSTEM")/SHA256SUMS"
+fi
+
+check_single
+to_fastboot
+[ "$(fb_var unlocked)" = yes ] || die "bootloader is not unlocked (fastboot getvar unlocked); run scripts/unlock.sh first"
+[ "$(fb_var current-slot)" = a ] || die "current slot is not a; this guide only uses slot a, stop"
+
+# The userdebug ABL answers no partition-size queries; sizes from the XP8800 GPT.
+part_size() {
+    local v
+    v=$(fb_var "partition-size:$1")
+    if [ -n "$v" ] && [ $((v)) -gt 0 ]; then echo $((v)); return; fi
+    case $1 in
+        boot_a) echo 67108864 ;;
+        vendor_a) echo 1073741824 ;;
+        system_a) echo 4294967296 ;;
+        misc) echo 1048576 ;;
+        *) return 1 ;;
+    esac
+}
+
+for pair in ${BOOT:+"boot_a:$BOOT"} ${VENDOR:+"vendor_a:$VENDOR"} ${SYSTEM:+"system_a:$SYSTEM"}; do
+    part=${pair%%:*} file=${pair#*:}
+    size=$(part_size "$part") || die "unknown size for $part"
+    [ "$(fsize "$file")" -le "$size" ] || die "$file is larger than $part"
+done
+
+
+ZERO=
+if [ $MISC = 1 ]; then
+    [ "$(part_size misc)" = 1048576 ] || die "misc is not 1 MiB; not clearing it"
+    ZERO=$(mktemp "${TMPDIR:-/tmp}/xp8-misc.XXXXXX")
+    trap 'rm -f "$ZERO"' EXIT
+    head -c 1048576 /dev/zero > "$ZERO"
+fi
+
+if [ $MISCONLY = 1 ]; then
+    confirm flash "About to write 1 MiB of zeros (the stock content) to misc on $SERIAL."
+    flash_settle misc "$ZERO"
+    F reboot || true
+    exit 0
+fi
+
+plan="About to write to $SERIAL over fastboot:
+  boot_a    $BOOT
+  vendor_a  $VENDOR"
+[ $MISC = 1 ] && plan+="
+  misc      1 MiB of zeros"
+[ $WIPE = 1 ] && plan+="
+  userdata  ERASE: deletes all apps, accounts and files on the phone"
+plan+="
+  system_a  $SYSTEM"
+if [ $WIPE = 0 ]; then
+    warn "no --wipe: userdata is kept. Coming from stock Android or another ROM, the GSI cannot use the old data; rerun with --wipe"
+fi
+confirm flash "$plan"
+
+flash_settle boot_a "$BOOT"
+flash_settle vendor_a "$VENDOR"
+[ $MISC = 1 ] && flash_settle misc "$ZERO"
+if [ $WIPE = 1 ]; then
+    say "erasing userdata"
+    F erase userdata
+    settle 0
+fi
+say "flashing system_a"
+flash_settle system_a "$SYSTEM"
+
+cat <<EOF
+$PROG: all writes done. Rebooting.
+If 'fastboot reboot' fails with "could not clear input/output pipe" or hangs,
+do not retry fastboot commands: hold Power 10-15 s. The phone then boots.
+EOF
+F reboot || true
+
+cat <<EOF
+
+$([ $WIPE = 1 ] && echo 'The first boot formats and encrypts /data before setup starts.')
+Then:
+  1. Go through setup and set a screen-lock PIN.
+  2. Enable USB debugging (Settings > About phone > tap Build number 7 times;
+     Developer options > USB debugging), plug in, tick "Always allow".
+  3. Run: SERIAL=$SERIAL scripts/verify-device.sh
+If the phone shows "Can't load Android system" or keeps booting to recovery:
+  SERIAL=$SERIAL scripts/flash.sh --misc-only   (see docs/troubleshooting.md)
+EOF
