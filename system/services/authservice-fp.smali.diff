@@ -1,0 +1,36 @@
+--- a/com/android/server/biometrics/AuthService.smali
++++ b/com/android/server/biometrics/AuthService.smali
+@@ -291,6 +291,18 @@
+     .line 1023
+     new-instance v0, Landroid/hardware/fingerprint/FingerprintSensorConfigurations;
+ 
++    if-eqz p1, :xp8_flag
++
++    array-length v1, p1
++
++    if-lez v1, :xp8_flag
++
++    const/4 v1, 0x0
++
++    goto :goto_a
++
++    :xp8_flag
++
+     if-eqz p0, :cond_9
+ 
+     array-length v1, p0
+@@ -307,6 +319,14 @@
+     :goto_a
+     invoke-direct {v0, v1}, Landroid/hardware/fingerprint/FingerprintSensorConfigurations;-><init>(Z)V
+ 
++    if-eqz p1, :xp8_aidl
++
++    array-length v1, p1
++
++    if-gtz v1, :cond_16
++
++    :xp8_aidl
++
+     if-eqz p0, :cond_16
+ 
+     .line 1027
